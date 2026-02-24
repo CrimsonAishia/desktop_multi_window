@@ -147,7 +147,8 @@ bool Win32Window::Create(const std::wstring& title,
   UINT dpi = FlutterDesktopGetDpiForMonitor(monitor);
   double scale_factor = dpi / 96.0;
 
-  HWND window = CreateWindow(
+  HWND window = CreateWindowEx(
+      WS_EX_NOACTIVATE,  // Extended style: don't activate when shown
       window_class, title.c_str(), WS_OVERLAPPEDWINDOW,
       Scale(origin.x, scale_factor), Scale(origin.y, scale_factor),
       Scale(size.width, scale_factor), Scale(size.height, scale_factor),
@@ -221,10 +222,17 @@ Win32Window::MessageHandler(HWND hwnd,
     }
 
     case WM_ACTIVATE:
-      if (child_content_ != nullptr) {
+      // Only set focus when window is being activated, not when it's being deactivated
+      // Also check if activation was caused by mouse click (not programmatic)
+      if (child_content_ != nullptr && LOWORD(wparam) != WA_INACTIVE) {
         SetFocus(child_content_);
       }
       return 0;
+
+    case WM_MOUSEACTIVATE:
+      // Prevent window activation when clicked - important for overlay windows
+      // that shouldn't steal focus from fullscreen games
+      return MA_NOACTIVATE;
 
     case WM_DWMCOLORIZATIONCOLORCHANGED:
       UpdateTheme(hwnd);
@@ -259,7 +267,8 @@ void Win32Window::SetChildContent(HWND content) {
   MoveWindow(content, frame.left, frame.top, frame.right - frame.left,
              frame.bottom - frame.top, true);
 
-  SetFocus(child_content_);
+  // Don't call SetFocus here to avoid stealing focus from other applications
+  // Focus will be set when the window receives WM_ACTIVATE
 }
 
 RECT Win32Window::GetClientArea() {
