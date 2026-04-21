@@ -164,7 +164,7 @@ bool Win32Window::Create(const std::wstring& title,
 }
 
 bool Win32Window::Show() {
-  return ShowWindow(window_handle_, SW_SHOWNORMAL);
+  return ShowWindow(window_handle_, SW_SHOWNOACTIVATE);
 }
 
 // static
@@ -224,9 +224,10 @@ Win32Window::MessageHandler(HWND hwnd,
     case WM_ACTIVATE:
       // Only set focus when window is being activated, not when it's being deactivated
       // Also check if activation was caused by mouse click (not programmatic)
-      if (child_content_ != nullptr && LOWORD(wparam) != WA_INACTIVE) {
-        SetFocus(child_content_);
-      }
+      // Prevent child_content_ from stealing focus in any situation
+      // if (child_content_ != nullptr && LOWORD(wparam) != WA_INACTIVE) {
+      //   SetFocus(child_content_);
+      // }
       return 0;
 
     case WM_MOUSEACTIVATE:
